@@ -39,7 +39,7 @@ if (!commits) {
   process.exit(0);
 }
 
-const prompt = `Summarize an npm release of "weighted-grid" (a React grid library).
+const prompt = `Summarize an npm release of "type-to-table" (a .tsx props → README markdown table CLI).
 
 New version: ${version}
 Previous tag: ${prevTag || '(none)'}

@@ -1,200 +1,92 @@
 # AGENTS.md
 
-Working notes for agents/contributors on `weighted-grid`.
+Working notes for agents/contributors on `type-to-table`.
 
 ## What this is
 
-A React grid (`react` is a real dependency; currently React-only, see the "Non-React" backlog item)
-that lays out a weighted, content-agnostic
-grid filling its container. See `docs/why.md` for the product rationale. **Read it before making
-structural changes.**
+A tiny doc-gen CLI/library: read a `.tsx` component, extract its props' JSDoc (via
+`react-docgen-typescript` — real TS-checker resolving, not a custom AST walker), and inject the
+result as a markdown table into a README between marker comments (via `taglify`). No manual
+props-table sync, ever. Node/Bun only — no browser runtime, no React dependency (`@types/react` is
+dev-only, for parsing `.tsx` fixtures).
 
-## Intended usage / mental model
+## Mental model
 
-One component, `<Grid>`, with `<GridItem>` children. There is **one engine** (a CSS-Grid span model)
-and the API is deliberately small:
+Two functions, both in `src/`:
 
-```tsx
-<Grid nrCols={8} rowHeight={isMobile ? 50 : 100}>
-  <GridItem weight={2}>…</GridItem> {/* elastic: weight sizes both axes */}
-  <GridItem cols={3}>…</GridItem> {/* pin one axis, weight fills the other */}
-  <GridItem cols={2} rows={2}>
-    …
-  </GridItem>{" "}
-  {/* strict: never stretches */}
-</Grid>
-```
+- **`tttGet(filePath, options?)`** (`src/tttGet.ts`) — parses `filePath` with
+  `react-docgen-typescript`'s `parse()`, picks one component's doc, and returns a markdown table
+  string (`Prop | Type | Default | Description`).
+- **`tttWrite(filePath, readmePath, options?)`** (`src/tttWrite.ts`) — calls `tttGet`, then
+  `taglify`'s `taglWrite` to replace the content between `<!-- PROPS-TABLE:START -->` /
+  `<!-- PROPS-TABLE:END -->` in `readmePath`. Returns whether the file changed.
 
-`<Grid>`'s own dimension props are `nrCols`/`nrRows`, not `cols`/`rows` — deliberately different from
-`<GridItem>`'s `cols`/`rows` (a per-item _span_, not a grid-wide count). Same short name meaning two
-different things in the same JSX block was a real, reported point of confusion; keep them distinct.
+`TttGetOptions`: `componentName` (disambiguates a file with multiple exported components —
+`tttGet` throws asking for it rather than silently picking one), `maxDescriptionLength`
+(truncates with `…`), `parserOptions` (passed straight through to `react-docgen-typescript`'s
+`ParserOptions` — the escape hatch for `componentNameResolver`, `customComponentTypes`, etc.).
 
-- **Sizing** — `weight` is flexbox-`flex`-style ("how much of the grid do I get"). Pin an axis with
-  `cols`/`rows` and `weight` fills the other; pin neither and it drives both. Elasticity is **per
-  axis**: `cols={2}` pins only the column axis (it never stretches horizontally) while `weight` keeps
-  the row axis elastic, and vice versa. Only an item with **both** `cols` and `rows` pinned is fully
-  strict on both axes.
-- **Empty cells** — one pass, not a mode switch: elastic axes **`stretch`** (default `Infinity`, `0` =
-  off) fairly into the gaps first, split evenly between the items flanking a gap, never all to one
-  side. Whatever `stretch` can't reach — because it's capped, boxed in, or there's no elastic neighbor
-  — stays a hole. Adjacent holes merge into unified rectangular blocks (`groupEmptyRects`); pass
-  **`fillComponent`** to render one node per block instead of one per cell. Omit it and those cells
-  just stay empty.
-- **`nrRows`** — a floor, not a cap. Content that needs more rows than declared always gets them (same
-  as CSS Grid's own implicit-row overflow); setting it larger than content only reserves headroom for
-  `stretch`. Never let a `rowCount` used for occupancy tracking be smaller than what placement actually
-  needs — that's what silently broke `stretch`/`fillComponent` for any row past a too-small `nrRows` in
-  the past (see the `nrRows` prop test in `react-render.test.tsx`). Omit it; most grids never need it.
-- **`rowHeight`** — `"auto"` (default, split the parent height into row bands) or a px/string value
-  (fixed per-row height, grid grows downward).
-- **`showGrid`** — a `repeating-linear-gradient` whose period is `track + gap` (both in one `calc()`,
-  so it works for any gap unit), transparent for the track and gap-colored for a fixed 1px line
-  centered in the gap. Correct by construction: never drifts from the real gutter (unlike a naive
-  `100% / n` division), and never bleeds into a semi-transparent item's own interior (unlike painting
-  the container itself, which showed through translucent items).
-- **`animateSize`/`animatePosition`** — opt-in FLIP transforms (`useFlip` in `src/react.tsx`) for
-  smooth size/position transitions on re-layout. CSS Grid line/span values aren't natively
-  interpolable, so this measures each item's box pre/post-render and plays the delta back as a
-  `transform` that eases to identity — not a real grid-track animation. Off by default.
-- **`preset`** — a `PresetFn` (`({ count, nrCols, nrRows }) => Partial<GridItemProps>[]`) that
-  computes default props per item; explicit `GridItem` props still win. `src/presets.ts` ships
-  `masonPreset`/`organicPreset`, exported only from the `weighted-grid/presets` subpath so unused
-  presets tree-shake away. `Grid` memoizes the preset call on `[preset, items.length, nrCols,
-  nrRows]` — pass a stable function (wrap a custom preset in `useCallback`) or it recomputes every
-  render.
+**The one hard rule, and don't fight it:** `react-docgen-typescript` needs a real component
+(`FC<Props>`, class, `forwardRef`, …) using the props type to anchor resolving on. A type with
+nothing rendering it in the same file returns zero docs — `tttGet` throws `No component found`.
+Verified empirically (see `tests/frameworks.test.ts`): Vue SFCs, Angular classes, Svelte, and Astro
+files all parse to `[]`, not an error — none of them are the React-FC shape the parser looks for.
+This is documented in the README, not worked around.
 
-Strict source order is always preserved; placement is deterministic.
+**Table safety:** `escapeCell` in `src/tttGet.ts` escapes `|` and collapses newlines to `<br>`
+before a row is built — every cell (type included: union types like `string | number` contain
+literal pipes), not just description.
 
 ## Layout
 
-- `src/react.tsx` — `<Grid>` / `<GridItem>` and the whole engine. `spanFor` maps each item to a
-  col/row span; the grid owns placement (`placeSpans`, strict order, explicit `grid-column`/`grid-row`
-  lines), grows elastic axes into the gaps (`fillDeadZones`), then renders `fillComponent` into
-  whatever holes are left, merged via `groupEmptyRects`.
-- `src/utils.ts` — placement + render helpers: `spanFor`, `placeSpans`, `packedRowCount`,
-  `fillDeadZones` (fair round-robin growth, per-axis via `elasticityOf`), `groupEmptyRects` (merges
-  leftover holes into rectangular filler blocks), `toCss`, `asGridItems`.
-- `src/index.ts` — package entry; re-exports `Grid`/`GridItem` + types from `./react`.
-- `src/presets.ts` — `PresetFn` and the built-in presets (`masonPreset`, `organicPreset`). Its own
-  entry point/build target (`weighted-grid/presets`), not re-exported from `src/index.ts`, so a
-  preset's code (e.g. `organicPreset`'s noise generator) tree-shakes away for anyone who doesn't
-  import it.
-- `tests/` — `react-render.test.tsx` (SSR output), `span-for.test.ts` (span math + `fillDeadZones`
-  fairness/caps), `dev-report-grid.test.ts` (QA baselines via `scripts/dev/dev-report-grid.ts`).
-- `demo/` — the released React+TypeScript (Vite) app, importing the library from source. Not part of
-  the published package. See the `demo/` section below.
-
-## History / restoring the old modes
-
-This grid used to have a standalone `dev/` reference app (a `Case`-as-plain-data Vite playground)
-before it was folded into `demo/`. Deleted; `git log -- dev/` has it if it's ever needed again.
-
-This grid used to have three `mode`s (`pack` / `order` / `treemap`) plus a squarified-treemap
-allocator (`src/core.ts`, `layoutGrid`). Those were removed in favour of the single engine above.
-
-- **Full old API preserved at tag `pre-simplify-1.2.0`** (commit `f28f318`) — check it out to restore
-  `mode`, `treemap`, `layoutGrid`, `src/core.ts`/`src/types.ts`, and `tests/core.test.ts` verbatim.
-- **The rewrite/deletion landed in commit `62448ea`** ("iteration-4") — its diff is the minimal "how
-  to re-add modes later" reference.
-
-## Repo layout
-
-- `./config/` — `vite.config.ts`, out of the root to cut visual clutter (`package.json`'s `build`/`dev`
-  scripts pass `--config` explicitly). `config/biome.json` holds the real Biome config; the root
-  `biome.json` is a 2-line stub (`{ "root": true, "extends": ["./config/biome.json"] }`) — Biome 2.x's
-  explicit `--config-path` refuses to treat a config living outside the actual project root as the
-  *root* config (tested — errors "not a root configuration"/"nested root configuration"), but an
-  `extends` stub at the real root works transparently for both the CLI and editor LSP, no
-  `--config-path`/`biome.lsp.configurationPath` override needed anywhere. `config/opengrep/` holds the
-  vendored security-scan rules (`config/opengrep/rules/*.yaml`) and their own `sync-rules.sh` re-sync
-  helper — `scripts/opengrep-scan.sh` (which stays in `scripts/`, it's the CI-invoked entry point)
-  points `RULES_DIR` there. `tsconfig.json` stays at root: TS/editor tooling auto-discovers it there
-  by convention, and moving it would cost IDE intellisense for a cosmetic win.
-- `./scripts/` — daily/CI scripts only (`bootstap.sh`, `deploy-pages.sh`, `opengrep-scan.sh`).
-  `./scripts/dev/` holds occasional-use dev tools (`dev-report-grid.ts`, `link-local.sh`) that aren't
-  part of the CI/release path. `./scripts/npm/` groups the release flow (`publish-npm.sh`,
-  `patch-json.ts`, `release-notes.ts`) — `publish-npm.sh` finds its siblings via `dirname "$0"`, so
-  they move together as one unit.
+- `src/tttGet.ts` — parsing + table-building + the multi-component disambiguation logic
+  (`pickComponent`).
+- `src/tttWrite.ts` — thin `taglWrite` wrapper around `tttGet`.
+- `src/index.ts` — package entry; re-exports both + `TttGetOptions`.
+- `scripts/docs-props.ts` — the `docs:props` CLI: `bun run docs:props -- path/to/Component.tsx
+  [componentName]`, writes into `./README.md`, tag `PROPS-TABLE`.
+- `examples/Button.tsx` — not a demo app, just the fixture the README's own "Props table" section
+  is generated from (`bun run docs:props -- examples/Button.tsx`) — the tool documents itself as
+  its own test case. Keep its JSDoc (including `@default`) in sync with what the README prose
+  claims about it.
+- `tests/fixtures/*.tsx` — `Widget.tsx` (baseline: `@default`, no-default prop, pipe/newline
+  escaping), `MultiComponent.tsx` (two exported components, for `componentName` tests),
+  `TypeOnly.tsx` (a type with no component — the "no component found" case).
+- `tests/fixtures/frameworks/<name>/` — one folder per stack (`react`, `nextjs`, `remix` —
+  supported; `vue`, `angular`, `svelte`, `astro` — not), each a component file + a `README.md`
+  carrying real `PROPS-TABLE` markers. `tests/frameworks.test.ts` loops all of them: assert the
+  markers start empty (`taglRead`), run `tttWrite`, assert content or a throw depending on
+  `supported`, then reset to empty via `taglWrite` in a `finally` — so the fixtures stay clean in
+  git between runs. Add a new stack by adding a folder + one entry in the `cases` array.
+- `tests/tttGet.test.ts` / `tests/tttWrite.test.ts` — unit tests for each function in isolation.
 
 ## Commands
 
 ```bash
-bun test            # run all tests (bun:test)
-bun run typecheck   # tsc --noEmit
-bun run build       # vite lib build → dist/ (index + react + presets entries)
-bun run format      # biome check --write
-cd demo && bun run typecheck && bunx vite build   # verify the demo typechecks and compiles
-bun scripts/dev/dev-report-grid.ts            # QA: every demo/src/examples static entry — holes, missed-stretch, fillComponent tiles
-bun scripts/dev/dev-report-grid.ts --case=1   # QA: just examples[1] ("the 2nd example") — the "read this before judging a screenshot" report
-scripts/dev/link-local.sh        # build + copy dist/ into ../jayf0x.github.io/node_modules (local test)
+bun test               # run all tests (bun:test)
+bun run typecheck      # tsc --noEmit
+bun run build          # vite lib build → dist/index.{js,d.ts}
+bun run format          # biome check --write
+bun run docs:props -- path/to/Component.tsx [componentName]   # regenerate README's props table
 ```
-
-`scripts/dev/dev-report-grid.ts` analyzes empty space in the span grid from the placement model
-(`placeSpans`) — no browser needed since the grid owns explicit placement, so this model equals
-what the DOM renders. It imports `demo/src/examples` directly (`Example[]` entries, filtered to the
-`kind: 'data'` ones — plain data, no JSX), so the report can never drift from what the demo app
-renders — there's exactly one definition of each static example's setup. `analyzeCase`/
-`formatCaseReport` report on one `Example` (holes, which ones `stretch` could've closed instead of
-ending up in a `fillComponent` tile, and the actual merged `fillComponent` tiles the grid would
-render); pass `--case=N` to scope to one example, `--cols=`/`--stretch=` to override that example's
-`Grid` props. `analyzeSpans`/`analyzeItems`/`showcaseItems` (behind `--showcase`) are the older
-Showcase-specific report. `analyzeDevGrid`/`formatDevReport` are a back-compat shim over
-`analyzeCase` for the pre-existing `devItems()`-shaped unit tests. Also importable for
-`tests/dev-report-grid.test.ts`.
 
 ## Conventions
 
-- `react` is a real `dependencies` entry, not a peer dep — the engine (`src/utils.ts`, `src/react.tsx`)
-  imports it directly and there's no non-React entry point today. See `backlog.md`.
-- Sizing is by relative **`weight`** only. No fixed-pixel _item_ sizes — a resizable grid doesn't need
-  them (`rowHeight` is the one per-row escape hatch).
-- Rendering is **native CSS Grid**; the JS only computes placement. Don't reimplement layout the
-  browser already does.
-- Placement stays **gap-free-aware, overlap-free, and order-preserving**. Any change to `placeSpans` /
-  `fillDeadZones` ships with a test proving those invariants still hold.
-- Boolean props/state get an `is`/`should` prefix internally; public boolean props may drop it for
-  ergonomics (`showGrid`).
-- Biome for format/lint (`biome.json`). TS strict.
+- No bundled runtime deps beyond `react-docgen-typescript` + `taglify` — both real `dependencies`
+  (this package's whole job is wrapping them). `@types/react` is dev-only; TS resolves `.tsx`
+  fixtures' `import type { FC } from 'react'` against it without an actual `react` package
+  installed (verified — don't re-add `react` as a dependency without checking that's still true).
+- `config/vite.config.ts` externalizes `react-docgen-typescript`, `taglify`, and `node:*` — without
+  that the build bundles the entire TypeScript compiler transitively (confirmed: ~4.4MB vs ~1.3kB).
+- Biome for format/lint (`biome.json` → `config/biome.json`). TS strict. `config/opengrep/` holds
+  vendored security-scan rules (`scripts/opengrep-scan.sh`, scans `src/` only).
+- `bun scripts/docs-props.ts` (and thus `tttWrite`) mutates whatever README you point it at —
+  when adding a new fixture under `tests/fixtures/frameworks/`, follow the reset-in-`finally`
+  pattern from `tests/frameworks.test.ts` so a failed test run doesn't leave a dirty fixture
+  checked in.
 
-## Reference material
+## History
 
-`.idea/d3-hierarchy/` is a vendored clone of d3-hierarchy — it was the source of the (now removed)
-squarified treemap allocator. **No longer referenced by any shipping code**; safe to delete if the
-old modes aren't being restored from git.
-
-# demo/
-
-The released React+TypeScript (Vite) app (`.github/workflows/demo-pages.yml` deploys it to GitHub
-Pages; `scripts/deploy-pages.sh`; README's "Live demo" badge). Imports the library from source via
-the `weighted-grid`/`weighted-grid/react`/`weighted-grid/presets` aliases in `demo/vite.config.ts`,
-so it tracks local changes. Not part of the published package. `bun run dev` / `bun run build` /
-`bun run typecheck`
-from inside `demo/`. `@/*` is aliased to `demo/src/*` (see `vite.config.ts` + `tsconfig.json`).
-
-- `demo/src/examples/*` — one folder per example, added by pushing an entry onto
-  `demo/src/examples/index.ts`'s ordered `ExampleEntry[]` list — the single array both the app shell
-  (`App.tsx`) and `scripts/dev/dev-report-grid.ts` import, so there's no way for the visual and the QA
-  report to disagree about an example's setup. Two shapes, both count as "an example":
-  - **Static data** (`prop-matrix/`, `pinned-spans/`): an `Example` (`{ title, meta, tiles }`, types
-    in `demo/src/typing.ts`) where `meta` is the `<Grid>` props in effect and `tiles` is a list of
-    `{ kind?: "item" | "void", ...GridItemProps }` (`kind` defaults to `"item"`; `"void"` renders as
-    intentional negative space via `<Void>` instead of `<Item>`). No component code — rendered by
-    the shared `ExampleSection`.
-  - **Interactive component** (`row-height/`, the *one* example allowed to be stateful — see the
-    merge plan's "interactivity gap"; don't generalize a `controls` descriptor onto `Example` for
-    it) and `organic-mosaic/` (real-looking card tiles from `demo/public/organic/`, laid out via the
-    library's `organicPreset`, no controls, no void tiles) — both export a component instead of
-    data.
-  `scripts/dev/dev-report-grid.ts` only analyzes the `kind: 'data'` entries.
-- `demo/src/components/` — shared per-tile visuals (`Item`/`Void`/`Filler`/`Title`), the info toggle
-  (`Header`), and `ExampleSection` (turns one static `Example` into a `<Grid>`). `Item`/`Void` take
-  an `infoMode: "simple" | "dev"` prop, lifted in `App.tsx` from a single global toggle — "how much
-  QA detail am I looking at right now" is one axis for the whole page, not a per-example setting.
-  Every static example renders through the same components; an example should never need its own
-  bespoke tile markup — extend these instead.
-- `demo/src/App.tsx` maps `examples` to sections, one per entry, in order.
-
-To ask an agent "look at the 2nd example": `bun scripts/dev/dev-report-grid.ts --case=1` gives the exact
-`Grid` props, tile count, and an ASCII occupancy map (holes vs. stretch-closable vs. stuck) without
-a browser; `demo/src/examples/<name>/index.ts(x)` gives the exact props/data that produced it.
-Screenshot the running app (`bun run dev` inside `demo/`) for the visual.
+Started from a copy of a sibling project's repo scaffold (`weighted-grid`, a React grid library —
+unrelated) — `git log` before the rename commit still has that scaffold's structure if anything
+here looks over-built for what's actually a two-function package.

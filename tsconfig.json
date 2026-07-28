@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "lib": ["ES2020", "DOM"],
+    "lib": ["ES2020"],
     "strict": true,
     "declaration": true,
     "esModuleInterop": true,
@@ -12,11 +12,8 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["bun-types"],
     "paths": {
-      "weighted-grid/react": ["./src/react.tsx"],
-      "weighted-grid/presets": ["./src/presets.ts"],
-      "weighted-grid": ["./src/index.ts"],
-      "@/*": ["./demo/src/*"]
+      "type-to-table": ["./src/index.ts"]
     }
   },
-  "include": ["src", "tests", "scripts", "demo/src"]
+  "include": ["src", "tests", "scripts", "examples"]
 }

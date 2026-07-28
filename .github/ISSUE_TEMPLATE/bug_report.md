@@ -1,6 +1,6 @@
 ---
 name: Bug
-about: Something broken in compress-shader-literals
+about: Something broken in type-to-table
 title: 'bug: <short description>'
 labels: 'type:bug'
 assignees: ''
@@ -14,15 +14,14 @@ assignees: ''
 
 <!-- tick one -->
 
-- [ ] `domain:core` — props / config / API
-- [ ] `domain:render` — shaders / display pass
-- [ ] `domain:physics` — fluid solver
-- [ ] `domain:react` — React component / hook
+- [ ] `domain:parse` — `tttGet` / react-docgen-typescript resolving
+- [ ] `domain:write` — `tttWrite` / taglify marker injection
+- [ ] `domain:cli` — `scripts/docs-props.ts`
 
 ## Reproduce
 
 ```tsx
-// minimal snippet
+// minimal component + props type
 ```
 
 ## Expected vs actual
@@ -35,4 +34,4 @@ assignees: ''
 ## Context
 
 - Version:
-- Browser + OS:
+- Node/Bun version:

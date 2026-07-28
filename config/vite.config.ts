@@ -1,27 +1,22 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
-import { snapBuild } from 'byte-snap';
-import include from 'plugin-include';
 
 export default defineConfig({
-  plugins: [dts({ rollupTypes: true }), snapBuild.vite({ dir: 'dist' }), include('./README.md')],
+  plugins: [dts({ rollupTypes: true })],
   build: {
     lib: {
-      entry: {
-        index: resolve(__dirname, '../src/index.ts'),
-        react: resolve(__dirname, '../src/react.tsx'),
-        presets: resolve(__dirname, '../src/presets.ts'),
-      },
+      entry: resolve(__dirname, '../src/index.ts'),
       formats: ['es'],
-      fileName: (_format, name) => `${name}.js`,
+      fileName: () => 'index.js',
     },
     target: 'es2020',
     minify: 'oxc',
     sourcemap: false,
     rollupOptions: {
-      // Keep React out of the bundle so `@weighted-grid/react` tree-shakes away when unused.
-      external: ['react', 'react-dom', 'react/jsx-runtime'],
+      // Node-only tool — ship as thin wrappers, don't bundle the TS compiler in transitively via
+      // react-docgen-typescript.
+      external: ['react-docgen-typescript', 'taglify', /^node:/],
       output: { exports: 'named' },
     },
   },

@@ -1,8 +1,8 @@
 {
-  "name": "weighted-grid",
-  "version": "1.5.2",
+  "name": "type-to-table",
+  "version": "0.0.0",
   "type": "module",
-  "description": "Weight in, layout out — a React grid that sizes items by relative weight, stretches them fairly into empty space, and renders as native CSS Grid. Bento, masonry and dashboard layouts without coordinates.",
+  "description": "Read a .tsx component's props, pull the JSDoc per prop (including @default), and write a markdown table into your README between marker comments. No manual props-docs sync, ever.",
   "author": "jayF0x",
   "license": "MIT",
   "module": "./dist/index.js",
@@ -11,18 +11,9 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./react": {
-      "types": "./dist/react.d.ts",
-      "import": "./dist/react.js"
-    },
-    "./presets": {
-      "types": "./dist/presets.d.ts",
-      "import": "./dist/presets.js"
     }
   },
   "dependencies": {
-    "react": ">=18",
     "react-docgen-typescript": "^2.4.0",
     "taglify": "^1.2.0"
   },
@@ -44,19 +35,13 @@
     "scan": "bash ./scripts/opengrep-scan.sh",
     "lint": "biome lint ./src",
     "lint:fix": "biome lint --write ./src",
-    "demo:dev": "cd demo && bun install && bun run dev",
-    "demo:deploy": "bash ./scripts/deploy-pages.sh",
     "npm:deploy": "bash ./scripts/npm/publish-npm.sh",
-    "repo:bootstrap": "bash ./scripts/bootstap.sh",
-    "size": "size-limit"
+    "repo:bootstrap": "bash ./scripts/bootstap.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.4",
-    "@size-limit/file": "^11",
     "@types/react": "^19.2.17",
     "bun-types": "^1.3.14",
-    "byte-snap": "^1.1.3",
-    "size-limit": "^11",
     "typescript": "^5.6.0",
     "vite": "^8.1.0",
     "vite-plugin-dts": "^4.0.0"
@@ -64,35 +49,24 @@
   "engines": {
     "node": ">=18"
   },
-  "size-limit": [
-    {
-      "path": "dist/index.js",
-      "limit": "6 kB"
-    }
-  ],
   "keywords": [
-    "react",
-    "grid",
-    "react-grid",
-    "grid-layout",
-    "css-grid",
-    "bento-grid",
-    "masonry",
-    "masonry-layout",
-    "dashboard-grid",
-    "gallery",
-    "responsive-grid",
-    "weighted-layout",
-    "elastic-layout",
-    "flexbox",
-    "typescript"
+    "typescript",
+    "tsx",
+    "jsdoc",
+    "react-docgen-typescript",
+    "props-table",
+    "readme",
+    "docs",
+    "docgen",
+    "markdown",
+    "codegen"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jayf0x/weighted-grid.git"
+    "url": "git+https://github.com/jayf0x/type-to-table.git"
   },
-  "homepage": "https://github.com/jayf0x/weighted-grid#readme",
+  "homepage": "https://github.com/jayf0x/type-to-table#readme",
   "bugs": {
-    "url": "https://github.com/jayf0x/weighted-grid/issues"
+    "url": "https://github.com/jayf0x/type-to-table/issues"
   }
 }
