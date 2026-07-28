@@ -1,0 +1,8 @@
+---
+interface Props {
+  /** The foo value. @default 'bar' */
+  foo?: string;
+}
+const { foo } = Astro.props;
+---
+<div>{foo}</div>

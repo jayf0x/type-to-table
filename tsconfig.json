@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "lib": ["ES2020", "DOM"],
+    "strict": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["bun-types"],
+    "paths": {
+      "weighted-grid/react": ["./src/react.tsx"],
+      "weighted-grid/presets": ["./src/presets.ts"],
+      "weighted-grid": ["./src/index.ts"],
+      "@/*": ["./demo/src/*"]
+    }
+  },
+  "include": ["src", "tests", "scripts", "demo/src"]
+}
