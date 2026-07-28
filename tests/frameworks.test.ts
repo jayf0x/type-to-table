@@ -10,10 +10,16 @@ import { tttWrite } from '../src/tttWrite';
  * only recognizes React FC/class components, so non-React formats (Vue SFC,
  * Angular class, Svelte, Astro) parse to zero docs — documented, not fought.
  */
-const cases: { name: string; component: string; supported: boolean }[] = [
-  { name: 'react', component: 'Component.tsx', supported: true },
-  { name: 'nextjs', component: 'Component.tsx', supported: true },
-  { name: 'remix', component: 'Component.tsx', supported: true },
+/**
+ * The supported (React-family) fixtures each import a nested prop type from a
+ * sibling `shared.ts` and carry an `@example` tag alongside `@default`, so this
+ * suite also proves imported-type resolution and JSDoc-tag stripping survive
+ * end to end through tttWrite, not just in tttGet's own unit tests.
+ */
+const cases: { name: string; component: string; supported: boolean; nestedTypeName?: string }[] = [
+  { name: 'react', component: 'Component.tsx', supported: true, nestedTypeName: 'Address' },
+  { name: 'nextjs', component: 'Component.tsx', supported: true, nestedTypeName: 'Author' },
+  { name: 'remix', component: 'Component.tsx', supported: true, nestedTypeName: 'SocialLinks' },
   { name: 'vue', component: 'Component.vue', supported: false },
   { name: 'angular', component: 'component.ts', supported: false },
   { name: 'svelte', component: 'Component.svelte', supported: false },
@@ -21,7 +27,7 @@ const cases: { name: string; component: string; supported: boolean }[] = [
 ];
 
 describe('framework fixtures', () => {
-  for (const { name, component, supported } of cases) {
+  for (const { name, component, supported, nestedTypeName } of cases) {
     test(`${name}: ${supported ? 'writes a props table' : 'is documented as unsupported'}`, () => {
       const dir = `${import.meta.dir}/fixtures/frameworks/${name}`;
       const readmePath = `${dir}/README.md`;
@@ -35,6 +41,9 @@ describe('framework fixtures', () => {
           expect(changed).toBe(true);
           const table = taglRead(readFileSync(readmePath, 'utf8'), 'PROPS-TABLE');
           expect(table).toContain('| Prop | Type | Default | Description |');
+          expect(table).toContain(`| ${nestedTypeName} |`);
+          expect(table).not.toContain('@example');
+          expect(table).not.toContain('```');
         } else {
           expect(() => tttWrite(componentPath, readmePath)).toThrow(/No component found/);
         }

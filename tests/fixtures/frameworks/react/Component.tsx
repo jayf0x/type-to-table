@@ -1,7 +1,17 @@
 import type { FC } from 'react';
+import type { Address, Variant } from './shared';
 
 export type BadgeProps = {
-  /** Badge text. @default 'New' */
+  /** Visual style. @default 'primary' */
+  variant?: Variant;
+  /** Where to ship the badge. */
+  address: Address;
+  /**
+   * Badge text.
+   * @default 'New'
+   * @example
+   * <Badge label="Sale" />
+   */
   label?: string;
 };
 

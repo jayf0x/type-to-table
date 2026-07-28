@@ -52,7 +52,10 @@ const pickComponent = (docs: ComponentDoc[], filePath: string, componentName?: s
  * anchor resolving on, and parse() returns no docs for the file.
  */
 export const tttGet = (filePath: string, options: TttGetOptions = {}): string => {
-  const docs = parse(filePath, options.parserOptions);
+  // shouldIncludePropTagMap moves JSDoc block tags (@example, @see, …) other than
+  // @default into prop.tags instead of leaving them concatenated into description —
+  // without it, e.g. `@example <Foo x="1" />` ends up crammed into the table cell.
+  const docs = parse(filePath, { shouldIncludePropTagMap: true, ...options.parserOptions });
   const doc = pickComponent(docs, filePath, options.componentName);
 
   const rows = Object.values(doc.props).map((prop) => {
