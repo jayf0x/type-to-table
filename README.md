@@ -13,10 +13,8 @@
 
 Your component's props are already documented — in the JSDoc above each field. `type-to-table`
 reads a `.tsx` component, resolves its props type with the real TypeScript checker, and writes a
-markdown table straight into your README. Re-run it after every prop change; no hand-maintained
-table ever drifts from the type again.
-
-> ⭐ Star the [repo](https://github.com/jayf0x/type-to-table) if this saved you a sync.
+markdown table straight into your README. Re-run it after every prop change to keep the table in
+sync with the type.
 
 ## Why not just write it by hand?
 

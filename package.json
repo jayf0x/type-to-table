@@ -2,7 +2,7 @@
   "name": "type-to-table",
   "version": "1.0.0",
   "type": "module",
-  "description": "Read a .tsx component's props, pull the JSDoc per prop (including @default), and write a markdown table into your README between marker comments. No manual props-docs sync, ever.",
+  "description": "Turns a TypeScript component's props into a markdown table so your docs never fall out of sync with the code.",
   "author": "jayF0x",
   "license": "MIT",
   "module": "./dist/index.js",
