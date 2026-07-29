@@ -1,6 +1,6 @@
 {
   "name": "type-to-table",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Turns a TypeScript component's props into a markdown table so your docs never fall out of sync with the code.",
   "author": "jayF0x",

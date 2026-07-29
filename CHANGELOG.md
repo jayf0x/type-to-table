@@ -3,6 +3,10 @@
 All notable changes to `type-to-table`. Dates are release dates; versions follow
 [semver](https://semver.org/).
 
+## 1.0.1 — 2026-07-29
+
+- Internal and tooling changes only.
+
 ## 1.0.0 — 2026-07-29
 
 - Initial release: auto-generate React component props tables in README

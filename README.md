@@ -34,6 +34,7 @@ README table that's already true.
 <!-- WHATSNEW:START -->
 | Version | Highlights |
 | ------- | ---------- |
+| `1.0.1` | Internal changes only |
 | `1.0.0` | Auto-generate React props documentation tables in README from JSDoc |
 | `0.0.0` | Initial setup — `tttGet` / `tttWrite` / `docs:props` CLI |
 <!-- WHATSNEW:END -->
