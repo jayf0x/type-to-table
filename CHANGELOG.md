@@ -3,6 +3,12 @@
 All notable changes to `type-to-table`. Dates are release dates; versions follow
 [semver](https://semver.org/).
 
+## 1.0.0 — 2026-07-29
+
+- Initial release: auto-generate React component props tables in README
+- Fix @example JSDoc tags leaking into prop descriptions
+- Support nested imported types in component fixtures
+
 ## 0.0.0 — 2026-07-28
 
 - Initial setup: `tttGet` (parse a `.tsx` component's props via `react-docgen-typescript`,

@@ -34,11 +34,10 @@ README table that's already true.
 ## What's new
 
 <!-- WHATSNEW:START -->
-
-| Version | Highlights                                               |
-| ------- | -------------------------------------------------------- |
+| Version | Highlights |
+| ------- | ---------- |
+| `1.0.0` | Auto-generate React props documentation tables in README from JSDoc |
 | `0.0.0` | Initial setup — `tttGet` / `tttWrite` / `docs:props` CLI |
-
 <!-- WHATSNEW:END -->
 
 Full history in [CHANGELOG.md](./CHANGELOG.md).

@@ -1,6 +1,6 @@
 {
   "name": "type-to-table",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "Read a .tsx component's props, pull the JSDoc per prop (including @default), and write a markdown table into your README between marker comments. No manual props-docs sync, ever.",
   "author": "jayF0x",
